@@ -4,3 +4,6 @@ test/grub.lnx
 test/shots/
 test/qmp.sock
 test/05_usb_mouse_test
+test/disk/*.img
+test/disk/*.bin
+test/disk/*.lnx

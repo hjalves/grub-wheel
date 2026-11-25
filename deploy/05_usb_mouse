@@ -9,6 +9,7 @@
 # Hold Shift while GRUB starts to skip it.
 set -e
 [ -f /boot/grub/usb_mouse/usb_mouse.mod ] || exit 0
+[ -f /boot/grub/usb_mouse/ehci_keepbios.mod ] || exit 0
 cat <<'EOF'
 ### BEGIN usb_mouse ###
 set usb_mouse_load=0
@@ -21,24 +22,32 @@ if [ "${usb_mouse_test}" = 1 ]; then
 elif [ "${usb_mouse}" = 1 ]; then
   set usb_mouse_load=1
 fi
+function usb_mouse_step {
+  if [ "${usb_mouse_load}" = 2 ]; then
+    set usb_mouse_result="$1"
+    save_env usb_mouse_result
+  fi
+}
 if [ "${usb_mouse_load}" != 0 ]; then
   insmod keystatus
   if keystatus --shift; then
     echo "usb_mouse: skipped (Shift held)"
+    usb_mouse_step "skipped: shift held"
   elif hashsum --hash sha256 --prefix "${prefix}/i386-pc" --check "${prefix}/usb_mouse/abi.sha256"; then
-    insmod ehci
+    # Patched copy of GRUB's ehci that keeps BIOS disk access (stock ehci
+    # unloads biosdisk, after which (hd0) is gone and nothing boots).
+    insmod "${prefix}/usb_mouse/ehci_keepbios.mod"
+    usb_mouse_step "ehci_keepbios rc=$?"
     insmod usb_keyboard
     insmod "${prefix}/usb_mouse/usb_mouse.mod"
+    usb_mouse_step "${usb_mouse_result}, usb_mouse rc=$?"
     if [ "${usb_mouse_load}" = 2 ]; then
       usb_mouse_probe usb_mouse_result
       save_env usb_mouse_result
     fi
   else
     echo "usb_mouse: GRUB modules differ from the ones usb_mouse.mod was built for; not loading it"
-    if [ "${usb_mouse_load}" = 2 ]; then
-      set usb_mouse_result="abi mismatch"
-      save_env usb_mouse_result
-    fi
+    usb_mouse_step "abi mismatch (hashsum rc=$?)"
   fi
 fi
 ### END usb_mouse ###

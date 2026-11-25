@@ -5,21 +5,19 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 HOST=${HOST:-asus-arch}
-rsync -a ../out/usb_mouse.mod 05_usb_mouse "$HOST":/tmp/grub-wheel-build/
+rsync -a ../out/usb_mouse.mod ../out/ehci_keepbios.mod ../out/abi.sha256 05_usb_mouse "$HOST":/tmp/
 ssh "$HOST" sudo bash -s <<'R'
 set -euo pipefail
-cd /tmp/grub-wheel-build
+cd /tmp
+# ABI pin: the stock modules from the build must match what
+# GRUB actually loads.
+(cd /boot/grub/i386-pc && sha256sum --quiet -c /tmp/abi.sha256) || {
+  echo "/boot/grub/i386-pc modules differ from the build; rebuild (build.sh)"; exit 1; }
 install -Dm644 usb_mouse.mod /boot/grub/usb_mouse/usb_mouse.mod
-# ABI pin: the module was built from the same source as these.
-for m in usb.mod ehci.mod usb_keyboard.mod; do
-  cmp -s grub-2.16/grub-core/$m /usr/lib/grub/i386-pc/$m ||
-    { echo "$m in the build tree differs from the installed grub package; rebuild"; exit 1; }
-done
-(cd /usr/lib/grub/i386-pc && sha256sum usb.mod ehci.mod usb_keyboard.mod) > abi.tmp
-(cd /boot/grub/i386-pc && sha256sum --quiet -c /tmp/grub-wheel-build/abi.tmp) || {
-  echo "/boot/grub/i386-pc differs from /usr/lib/grub/i386-pc (grub-install not run after an upgrade?)"; exit 1; }
-install -m644 abi.tmp /boot/grub/usb_mouse/abi.sha256
+install -m644 ehci_keepbios.mod /boot/grub/usb_mouse/ehci_keepbios.mod
+install -m644 abi.sha256 /boot/grub/usb_mouse/abi.sha256
 install -m755 05_usb_mouse /etc/grub.d/05_usb_mouse
 grub-mkconfig -o /boot/grub/grub.cfg 2>&1 | tail -3
 grep -c "BEGIN usb_mouse" /boot/grub/grub.cfg
+rm -f usb_mouse.mod ehci_keepbios.mod abi.sha256 05_usb_mouse
 R
