@@ -7,3 +7,6 @@ test/05_usb_mouse_test
 test/disk/*.img
 test/disk/*.bin
 test/disk/*.lnx
+test/disk/fs.img
+test/disk/mon.sock
+test/disk/*.png

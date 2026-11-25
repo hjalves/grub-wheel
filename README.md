@@ -22,8 +22,16 @@ boot menu: **wheel up/down = ↑/↓**, **left click = Enter**. Pointer motion i
 - `deploy/install.sh`: installs `/boot/grub/usb_mouse/{usb_mouse.mod,ehci_keepbios.mod,abi.sha256}`
   and `/etc/grub.d/05_usb_mouse`, then runs `grub-mkconfig`. It does not enable
   the module.
-- `test/`: QEMU test. `mkimage.sh` builds an lnxboot+memdisk image, and
-  `qemu-test.py` injects wheel and click events over QMP and takes screenshots.
+- `test/`: QEMU tests.
+  - `mkimage.sh` + `qemu-test.py`: lnxboot+memdisk image. Injects wheel and
+    click events over QMP and saves screenshots to `test/shots/`.
+  - `disk/`: the real grub.d snippet booted from a real disk image through the
+    BIOS disk driver, which is what catches the biosdisk problem.
+    `./mke2ecfg.sh && ./mkdisk.sh && ./run.sh`, then press Enter on "Read
+    disk". You should see `usb_mouse_result=... ok`.
+
+  The images are built on asus-arch with its installed GRUB tools, and QEMU
+  runs on the VM.
 
 ## Enabling (on asus-arch)
 
@@ -54,3 +62,8 @@ Hold **Shift** while GRUB starts to skip loading it.
 - QEMU: the wheel and click work (UHCI). The BIOS disk stays usable after
   `ehci_keepbios` (`test/disk`).
 - Not yet done: a person scrolling the real wheel at the menu.
+
+## License
+
+GPLv3+, like GRUB. `usb_mouse.c` is based on GRUB's `term/usb_keyboard.c`,
+and `ehci_keepbios` is GRUB's `bus/usb/ehci*.c`, patched at build time.
