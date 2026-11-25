@@ -1,0 +1,6 @@
+upstream/
+out/
+test/grub.lnx
+test/shots/
+test/qmp.sock
+test/05_usb_mouse_test
